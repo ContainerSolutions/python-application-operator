@@ -47,21 +47,6 @@ class PythonApplicationOperatorCharm(CharmBase):
         spec = {
             'version': 3,
             'containers': [
-                # {
-                #     'init': True,
-                #     'name': self.app.name + "-code-init",
-                #     'imageDetails': {
-                #         'imagePath': config['image']
-                #     },
-                #     'args': ["bash", "/data/init-code.sh"],
-                #     'kubernetes': {},
-                #     "volumeConfig": vol_config_init,
-                #     'ports': [{
-                #         'containerPort': 3001,
-                #         'name': 'init-http',
-                #         'protocol': 'TCP'
-                #     }]
-                # },
                 {
                     'name': self.app.name,
                     'imageDetails': {
@@ -74,8 +59,22 @@ class PythonApplicationOperatorCharm(CharmBase):
                         'containerPort': 3000,
                         'name': 'app-http',
                         'protocol': 'TCP',
-                        'type': 'NodePort'
                         }]
+                },
+                {
+                    'init': True,
+                    'name': self.app.name + "-code-init",
+                    'imageDetails': {
+                        'imagePath': config['image']
+                    },
+                    'args': ["bash", "/data/init-code.sh"],
+                    'kubernetes': {},
+                    "volumeConfig": vol_config,
+                    'ports': [{
+                        'containerPort': 3001,
+                        'name': 'init-http',
+                        'protocol': 'TCP'
+                    }]
                 },
             ],
             "kubernetesResources": {
