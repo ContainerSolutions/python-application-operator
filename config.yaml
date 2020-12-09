@@ -1,0 +1,7 @@
+options:
+  image:
+    description: |
+      Image used to run code preparation and application
+    type: string
+    default: "python:3.9-slim"
+
