@@ -6,5 +6,8 @@ description: |
 summary: |
   TODO: fill out the charm's summary
 series: [kubernetes]
-
+requires:
+  db:
+    interface: pgsql
+    limit: 1
 
