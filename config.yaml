@@ -4,4 +4,18 @@ options:
       Image used to run code preparation and application
     type: string
     default: "python:3.9-slim"
-
+  appName:
+    description: |
+      Application name, used to start application
+    type: string
+    default: "app"
+  packageName:
+    description: |
+      Application package name, used to start application
+    type: string
+    default: "app"
+  gitRepo:
+    description: |
+      Publicly available git repository, only HTTPS is supported
+    type: string
+    default: "https://github.com/kirek007/python-hello-web.git"
