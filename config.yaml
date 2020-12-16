@@ -13,7 +13,7 @@ options:
     description: |
       Database name if needed, keep empty if it's not needed
     type: string
-    default: ""
+    default: "awesome_database"
   git_repo:
     description: |
       Publicly available git repository, only HTTPS is supported

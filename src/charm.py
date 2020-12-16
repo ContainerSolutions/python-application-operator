@@ -24,7 +24,7 @@ class PythonApplicationOperatorCharm(CharmBase):
         self.db = pgsql.PostgreSQLClient(self, 'db')  # 'db' relation in metadata.yaml
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.db.on.database_relation_joined, self._on_database_relation_joined)
-        self.framework.observe(self.db.on.database_available, self._on_database_available)
+        self.framework.observe(self.db.on.master_changed, self._master_changed)
 
         self._stored.db_conn_str = ""
         self._stored.database_enabled = False
@@ -41,7 +41,7 @@ class PythonApplicationOperatorCharm(CharmBase):
                 event.defer()
                 return
 
-    def _on_database_available(self, event: pgsql.DatabaseAvailableEvent):
+    def _master_changed(self, event: pgsql.MasterChangedEvent):
         if event.database != DATABASE_NAME:
             return
 
@@ -61,6 +61,7 @@ class PythonApplicationOperatorCharm(CharmBase):
             return
 
         if self._stored.database_ready:
+            logger.info("Injecting database data")
             env_config = {
                 "DATABASE_{}_CON_STR".format(config["database_name"]) : self._stored.db_conn_str
             }
