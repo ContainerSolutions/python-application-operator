@@ -8,7 +8,7 @@ import ops.lib
 from ops.charm import CharmBase
 from ops.main import main
 from ops.framework import StoredState
-from ops.model import MaintenanceStatus, ActiveStatus
+from ops.model import MaintenanceStatus, ActiveStatus, BlockedStatus
 
 logger = logging.getLogger(__name__)
 pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
@@ -36,6 +36,7 @@ class PythonApplicationOperatorCharm(CharmBase):
                 event.defer()
                 return
 
+
     def _on_master_changed(self, event: pgsql.MasterChangedEvent):
         if event.database != DATABASE_NAME:
             return
@@ -44,10 +45,17 @@ class PythonApplicationOperatorCharm(CharmBase):
         logger.info("Got database info! {}".format(self._stored.db_conn_str))
         self._update_pod()
 
+
     def _update_pod(self):
         self.unit.status = MaintenanceStatus('Updating configuration...')
 
         config = self.model.config
+
+        if not config["gitRepo"]:
+            self.unit.status = BlockedStatus('Git repository is not provided')
+            return
+
+
 
         vol_config = [
             # {"name": "git-secret", "mountPath": "/secrets", "secret": {"name": "charm-secrets"}},
@@ -66,7 +74,7 @@ class PythonApplicationOperatorCharm(CharmBase):
                     'imageDetails': {
                         'imagePath': config['image']
                     },
-                    'args': ["bash", "/data/init-code.sh"],
+                    'args': ["bash", "/data/init-code.sh", config['gitRepo'],config['packageName'],config['appName']],
                     'kubernetes': {},
                     "volumeConfig": vol_config,
                     "envConfig": {
@@ -77,6 +85,21 @@ class PythonApplicationOperatorCharm(CharmBase):
                         'containerPort': 3000,
                         'name': 'app-http',
                         'protocol': 'TCP',
+                    }]
+                },
+                {
+                    'init': True,
+                    'name': self.app.name + "-code-init",
+                    'imageDetails': {
+                        'imagePath': config['image']
+                    },
+                    'args': ["bash", "/data/init-code.sh"],
+                    'kubernetes': {},
+                    "volumeConfig": vol_config,
+                    'ports': [{
+                        'containerPort': 3001,
+                        'name': 'init-http',
+                        'protocol': 'TCP'
                     }]
                 },
             ],

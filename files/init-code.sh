@@ -5,20 +5,23 @@ set -eux
 ls /app
 ls /data
 
-echo "Hello world!"
+gitRepo=$1
+packageName=$2
+appName=$3
+
 export DEBIAN_FRONTEND=noninteractive
 apt update
 apt -yq install git curl
 cd /app || exit 1
-git clone https://github.com/kirek007/python-hello-web.git code
+git clone "${gitRepo}" code
 cd code || exit 1
 pip install -r requirements.txt
 pip install gunicorn
 cat > wsgi.py <<EOF
-from app import app
+from ${packageName} import ${appName}
 
 if __name__ == "__main__":
-    app.run()
+    ${appName}.run()
 EOF
 
-bash /data/start-app.sh
+bash /data/start-app.sh "${appName}"
