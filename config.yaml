@@ -4,18 +4,28 @@ options:
       Image used to run code preparation and application
     type: string
     default: "python:3.9-slim"
-  appName:
+  entrypoint:
     description: |
-      Application name, used to start application
+      Application entrypoint for gunicorn
     type: string
-    default: "app"
-  packageName:
+    default: "wsgi:app"
+  database_name:
     description: |
-      Application package name, used to start application
+      Database name if needed, keep empty if it's not needed
     type: string
-    default: "app"
-  gitRepo:
+    default: "awesome_database"
+  git_repo:
     description: |
       Publicly available git repository, only HTTPS is supported
     type: string
     default: "https://github.com/kirek007/python-hello-web.git"
+  application_port:
+    description: |
+      Application port for internal listening
+    type: string
+    default: "5000"
+  gunicorn_workers:
+    description: |
+      Workers count
+    type: string
+    default: "4"

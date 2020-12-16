@@ -24,41 +24,49 @@ class PythonApplicationOperatorCharm(CharmBase):
         self.db = pgsql.PostgreSQLClient(self, 'db')  # 'db' relation in metadata.yaml
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.db.on.database_relation_joined, self._on_database_relation_joined)
-        self.framework.observe(self.db.on.master_changed, self._on_master_changed)
+        self.framework.observe(self.db.on.master_changed, self._master_changed)
 
         self._stored.db_conn_str = ""
+        self._stored.database_enabled = False
+        self._stored.database_ready = False
+        self._stored.database_name = ""
+        self._stored.database_name_updated = False
 
     def _on_database_relation_joined(self, event: pgsql.DatabaseRelationJoinedEvent):
         if self.model.unit.is_leader():
-            event.database = DATABASE_NAME  # Request database named mydbname
+            config = self.model.config
+            event.database = config["database_name"]
             logger.info("Requested database! {}".format(event.database))
         elif event.database != DATABASE_NAME:
                 event.defer()
                 return
 
-
-    def _on_master_changed(self, event: pgsql.MasterChangedEvent):
+    def _master_changed(self, event: pgsql.MasterChangedEvent):
         if event.database != DATABASE_NAME:
             return
 
         self._stored.db_conn_str = None if event.master is None else event.master.conn_str
         logger.info("Got database info! {}".format(self._stored.db_conn_str))
+        self._stored.database_ready = True
         self._update_pod()
-
 
     def _update_pod(self):
         self.unit.status = MaintenanceStatus('Updating configuration...')
 
         config = self.model.config
+        env_config = {}
 
-        if not config["gitRepo"]:
+        if not config["git_repo"]:
             self.unit.status = BlockedStatus('Git repository is not provided')
             return
 
-
+        if self._stored.database_ready:
+            logger.info("Injecting database data")
+            env_config = {
+                "DATABASE_{}_CON_STR".format(config["database_name"]) : self._stored.db_conn_str
+            }
 
         vol_config = [
-            # {"name": "git-secret", "mountPath": "/secrets", "secret": {"name": "charm-secrets"}},
             {"name": "app-code", "mountPath": "/app", "emptyDir": {"medium": "Memory"}},
             {'name': 'init-code-files', 'mountPath': '/data', 'files': [
                 {'path': 'init-code.sh', 'content': open("./files/init-code.sh").read()},
@@ -74,32 +82,14 @@ class PythonApplicationOperatorCharm(CharmBase):
                     'imageDetails': {
                         'imagePath': config['image']
                     },
-                    'args': ["bash", "/data/init-code.sh", config['gitRepo'],config['packageName'],config['appName']],
+                    'args': ["bash", "/data/init-code.sh", config['git_repo'],config['entrypoint'], config['gunicorn_workers'], config['application_port']],
                     'kubernetes': {},
                     "volumeConfig": vol_config,
-                    "envConfig": {
-                        "DATABASE_CONNECTION_STRING": self._stored.db_conn_str,
-                        "DATABASE_NAME": DATABASE_NAME,
-                    },
+                    "envConfig": env_config,
                     'ports': [{
-                        'containerPort': 3000,
+                        'containerPort': int(config['application_port']),
                         'name': 'app-http',
                         'protocol': 'TCP',
-                    }]
-                },
-                {
-                    'init': True,
-                    'name': self.app.name + "-code-init",
-                    'imageDetails': {
-                        'imagePath': config['image']
-                    },
-                    'args': ["bash", "/data/init-code.sh"],
-                    'kubernetes': {},
-                    "volumeConfig": vol_config,
-                    'ports': [{
-                        'containerPort': 3001,
-                        'name': 'init-http',
-                        'protocol': 'TCP'
                     }]
                 },
             ],
@@ -115,6 +105,7 @@ class PythonApplicationOperatorCharm(CharmBase):
             return
 
         self._update_pod()
+
 
 if __name__ == "__main__":
     main(PythonApplicationOperatorCharm)

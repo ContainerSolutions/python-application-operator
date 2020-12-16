@@ -6,8 +6,9 @@ ls /app
 ls /data
 
 gitRepo=$1
-packageName=$2
-appName=$3
+entrypoint=$2
+gunicorn_workers=$3
+app_port=$4
 
 export DEBIAN_FRONTEND=noninteractive
 apt update
@@ -17,11 +18,5 @@ git clone "${gitRepo}" code
 cd code || exit 1
 pip install -r requirements.txt
 pip install gunicorn
-cat > wsgi.py <<EOF
-from ${packageName} import ${appName}
 
-if __name__ == "__main__":
-    ${appName}.run()
-EOF
-
-bash /data/start-app.sh "${appName}"
+bash /data/start-app.sh "${entrypoint}" "${gunicorn_workers}" "${app_port}"
