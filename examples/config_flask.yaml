@@ -1,0 +1,4 @@
+python-application-operator:
+  image: python:3.9-slim
+  git_repo: https://github.com/kirek007/python-hello-web.git
+  entrypoint: "wsgi:app"
